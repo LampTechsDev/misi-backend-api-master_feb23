@@ -1,0 +1,5 @@
+deployment:
+task:
+ - export DEPLOYPATH=/home/guidelin/misiApi.lamptechs.com
+ - /bin/cp index.html $DEPLOYPATH
+ - /bin/cp style.css $DEPLOYPATH

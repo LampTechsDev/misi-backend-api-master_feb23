@@ -1,0 +1,48 @@
+<?php
+
+namespace App\Http\Resources;
+
+// use App\Models\ServiceSubCategory;
+use Illuminate\Http\Resources\Json\ResourceCollection;
+
+class ServiceSubCategoryCollection extends ResourceCollection
+{
+    protected $withoutFields = [];
+
+    /**
+     * Set Hidden Item 
+     */
+    public function hide(array $hide = []){
+        $this->withoutFields = $hide;
+        return $this;
+    }
+
+    /**
+     * Filter Hide Items
+     */
+    protected function filter($data){
+        return collect($data)->forget($this->withoutFields)->toArray();
+    }
+
+    /**
+     * Process The Collection
+     */
+    protected function processCollection($request){
+        return $this->collection->map(function (ServiceSubCategoryResource $resource) use ($request) {
+            return $resource->hide($this->withoutFields)->toArray($request);
+        })->all();
+    }
+
+    /**
+     * Transform the resource into an array.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return array|\Illuminate\Contracts\Support\Arrayable|\JsonSerializable
+     */
+    public function toArray($request)
+    {
+        return $this->processCollection($request);
+    }
+
+
+}
