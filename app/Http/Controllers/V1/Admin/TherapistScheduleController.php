@@ -204,8 +204,8 @@ class TherapistScheduleController extends Controller
         if ($validator->fails()) {
             return $this->apiOutput($this->getValidationError($validator), 400);
         }
-        $schedule = TherapistSchedule::whereIn("id", $request->id)->where("status", "open")->delete();
-        $schedule->delete();
+        TherapistSchedule::whereIn("id", $request->id)->where("status", "open")->delete();
+
         $this->apiSuccess("Multiple Schedule Deleted Successfully");
         return $this->apiOutput();
     }
