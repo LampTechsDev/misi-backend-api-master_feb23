@@ -81,9 +81,9 @@ class AdminController extends Controller
 
     public function index()
     {
-        if(!PermissionController::hasAccess("admin_list")){
-            return $this->apiOutput("Permission Missing", 403);
-        }
+        // if(!PermissionController::hasAccess("admin_list")){
+        //     return $this->apiOutput("Permission Missing", 403);
+        // }
 
         try{
             $this->data = AdminResource::collection(Admin::all());
@@ -112,9 +112,9 @@ class AdminController extends Controller
 
     public function store(Request $request)
     {
-        if(!PermissionController::hasAccess("admin_create")){
-            return $this->apiOutput("Permission Missing", 403);
-        }
+        // if(!PermissionController::hasAccess("admin_create")){
+        //     return $this->apiOutput("Permission Missing", 403);
+        // }
 
         try{
             $validator = Validator::make($request->all(), [
@@ -150,9 +150,9 @@ class AdminController extends Controller
 
     public function update(Request $request, $id)
     {
-        if(!PermissionController::hasAccess("admin_update")){
-            return $this->apiOutput("Permission Missing", 403);
-        }
+        // if(!PermissionController::hasAccess("admin_update")){
+        //     return $this->apiOutput("Permission Missing", 403);
+        // }
 
         try{
         $validator = Validator::make($request->all(),[
@@ -183,9 +183,9 @@ class AdminController extends Controller
 
     public function destroy($id)
     {
-        if(!PermissionController::hasAccess("admin_delete")){
-            return $this->apiOutput("Permission Missing", 403);
-        }
+        // if(!PermissionController::hasAccess("admin_delete")){
+        //     return $this->apiOutput("Permission Missing", 403);
+        // }
 
         $admin = Admin::find($id);
         $admin->delete();

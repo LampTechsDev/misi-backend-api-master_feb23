@@ -28,6 +28,7 @@ use App\Http\Controllers\V1\PitFormulaController;
 use App\Http\Controllers\V1\PibScaleController;
 use App\Http\Controllers\V1\PitScaleController;
 use App\Http\Controllers\V1\Therapist\AppointmentController as TherapistAppointmentController;
+use App\Http\Controllers\V1\Therapist\TherapistScheduleController as TherapistTherapistScheduleController;
 use App\Http\Controllers\V1\Therapist\TicketController as TherapistTicketController;
 use App\Http\Controllers\V1\TicketHistoryActivityController;
 use Illuminate\Http\Request;
@@ -96,7 +97,7 @@ Route::middleware(["auth:admin"])->group(function(){
         });
     });
 
-        
+
     //Pit Formula Section
     Route::prefix('pit')->group(function(){
         Route::get('/', [PitFormulaController::class, 'index']);
@@ -249,7 +250,7 @@ Route::middleware(["auth:admin"])->group(function(){
     Route::get('/question/show', [QuestionController::class, 'show']);
     Route::post('/question/update/{id}', [QuestionController::class, 'update']);
     Route::post('/question/delete/{id}', [QuestionController::class, 'destroy']);
-    
+
 
     //Pib Formula
     Route::get('/formula', [PibFormulaController::class, 'index']);
@@ -285,7 +286,7 @@ Route::middleware(["auth:admin"])->group(function(){
         Route::post('/update/{id}', [BloodGroupController::class, 'update']);
         Route::post('/delete/{id}', [BloodGroupController::class, 'destroy']);
     });
-    
+
     //State
     Route::prefix('state')->group(function(){
         Route::get('/', [StateController::class, 'index']);
@@ -336,13 +337,13 @@ Route::middleware(["auth:admin"])->group(function(){
      * Appointment Intake
      */
     Route::prefix('appointment-intake')->group(function(){
-        
+
         Route::get('/list', [AppointmentIntakeController::class, 'index']);
         Route::get('/show', [AppointmentIntakeController::class, 'show']);
         Route::post('/store', [AppointmentIntakeController::class, 'store']);
         Route::post('/update', [AppointmentIntakeController::class, 'update']);
         Route::post('/delete', [AppointmentIntakeController::class, 'destroy']);
-       
+
     });
 
 });
@@ -366,7 +367,19 @@ Route::middleware(["auth:therapist"])->prefix("therapist")->group(function(){
     Route::post('profile/update', [TherapistController::class, 'updateProfile']);
     Route::post('/logout',[TherapistController::class,'logout']);
 
-   
+    /**
+     * Therapist Schedule
+     */
+    Route::prefix('therapist-schedule')->group(function(){
+
+        Route::get('/list',            [TherapistTherapistScheduleController::class, 'index']);
+        Route::post('/create',         [TherapistTherapistScheduleController::class, 'store']);
+        Route::get('/show',            [TherapistTherapistScheduleController::class, 'show']);
+        Route::post('delete',          [TherapistTherapistScheduleController::class, 'destroy']);
+        Route::post('multiple-delete', [TherapistTherapistScheduleController::class, 'multipleDelete']);
+    });
+
+
     /**
      * Therapist Tickets
      */
@@ -381,7 +394,7 @@ Route::middleware(["auth:therapist"])->prefix("therapist")->group(function(){
         Route::post('/ticketUpdateImage', [TicketController::class, 'updateTicketFileInfo']);
         Route::post('/delete/{id}', [TherapistTicketController::class, 'deleteTicket']);
     });
-    
+
     // Reply On Ticket
     Route::prefix("reply")->group(function(){
         Route::get('/', [TherapistTicketController::class, 'replyList']);
@@ -390,7 +403,7 @@ Route::middleware(["auth:therapist"])->prefix("therapist")->group(function(){
         Route::post('/update', [TherapistTicketController::class, 'updateReply']);
         Route::get('/delete', [TherapistTicketController::class, 'deleteReply']);
     });
-    
+
     Route::prefix('appointment')->group(function(){
         Route::get('/', [TherapistAppointmentController::class, 'index']);
         Route::get('/show', [TherapistAppointmentController::class, 'show']);
@@ -400,7 +413,7 @@ Route::middleware(["auth:therapist"])->prefix("therapist")->group(function(){
         Route::post('/appointmentUpdateImage', [AppointmentController::class, 'updateAppointmentFileInfo']);
         Route::post('/delete', [TherapistAppointmentController::class, 'destroy']);
     });
-    
+
 });
 
 
@@ -415,15 +428,15 @@ Route::post('patient/password-reset', [PatientController::class, "passwordReset"
  * Patient Authentication
  */
 Route::middleware(["auth:patient"])->prefix("patient")->group(function(){
-    
+
     Route::post('logout', [PatientController::class, "logout"]);
     Route::get('/', [PatientController::class, 'index']);
     Route::get('/show', [PatientController::class, 'show']);
     Route::post('/store', [PatientController::class, 'store']);
     Route::post('/update', [PatientController::class, 'update']);
     Route::post('/delete', [PatientController::class, 'destroy']);
-    
-    Route::prefix('ticket')->group(function(){ 
+
+    Route::prefix('ticket')->group(function(){
         Route::get('/', [PatientTicketController::class, 'index']);
         Route::post('/create', [PatientTicketController::class, 'store']);
         Route::get('/show', [PatientTicketController::class, 'show']);
@@ -433,7 +446,7 @@ Route::middleware(["auth:patient"])->prefix("patient")->group(function(){
         Route::post('/assignedticket', [PatientTicketController::class, 'assignedticket']);
         Route::post('/ticketuploaddelete', [PatientTicketController::class, 'deleteFileTicket']);
     });
-           
+
     // Reply On Ticket
     Route::prefix("reply")->group(function(){
         Route::get('/', [PatientTicketController::class, 'replyList']);
@@ -442,8 +455,8 @@ Route::middleware(["auth:patient"])->prefix("patient")->group(function(){
         Route::post('/update', [PatientTicketController::class, 'updateReply']);
         Route::get('/delete', [PatientTicketController::class, 'deleteReply']);
     });
-    
-    
+
+
     // Appointment
     Route::prefix('appointment')->group(function(){
         Route::get('/', [AppointmentController::class, 'index']);
