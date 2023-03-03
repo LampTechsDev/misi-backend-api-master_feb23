@@ -366,6 +366,19 @@ Route::middleware(["auth:therapist"])->prefix("therapist")->group(function(){
     Route::post('profile/update', [TherapistController::class, 'updateProfile']);
     Route::post('/logout',[TherapistController::class,'logout']);
 
+    /**
+     * Therapist Schedule
+     */
+    Route::prefix('schedule')->group(function () {
+        Route::get('/list', [TherapistScheduleController::class, 'index']);
+        Route::get('/create', [TherapistScheduleController::class, 'create']);
+        Route::post('/create', [TherapistScheduleController::class, 'store']);
+        Route::get('/show', [TherapistScheduleController::class, 'show']);
+        Route::get('/available-therapist-list', [TherapistScheduleController::class, 'therapistAvailableSchedule']);
+        Route::post('/cancelTherapistSchedule', [TherapistScheduleController::class, 'cancelTherapistSchedule']);
+        Route::post('delete', [TherapistScheduleController::class, 'destroy']);
+        Route::post('multiple-delete', [TherapistScheduleController::class, 'multipleDelete']);
+    });
    
     /**
      * Therapist Tickets
