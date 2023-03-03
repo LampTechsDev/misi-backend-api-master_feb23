@@ -1,26 +1,22 @@
 <?php
 
-namespace App\Http\Controllers\V1\Admin;
+namespace App\Http\Controllers\V1\Therapist;
 
 use App\Http\Components\Traits\Schedule;
 use App\Http\Controllers\Controller;
-use App\Http\Resources\TherapistResource;
 use App\Http\Resources\TherapistScheduleResource;
 use App\Http\Resources\TherapistScheduleSettingsResource;
-use App\Models\Therapist;
 use App\Models\TherapistSchedule;
 use App\Models\TherapistScheduleSettings;
 use Carbon\Carbon;
 use Exception;
-use Facade\FlareClient\Http\Response;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
-class TherapistScheduleController extends Controller
+class ScheduleController extends Controller
 {
-
     use Schedule;
     /**
      * Display a listing of the resource.
@@ -30,14 +26,11 @@ class TherapistScheduleController extends Controller
     public function index(Request $request)
     {
         try{
-            $schedule = TherapistSchedule::orderBy("date", "ASC")->orderBY("id", "ASC");
+            $schedule = TherapistSchedule::where("therapist_id", $request->user()->id)->orderBy("date", "ASC")->orderBY("id", "ASC");
             if( !empty($request->date) ){
                 $schedule->where("date", ">=", Carbon::parse($request->date)->format("Y-m-d"));
             }else{
                 $schedule->where("date", ">=", date("Y-m-d"));
-            }
-            if( !empty($request->therapist_id) ){
-                $schedule->where("therapist_id", $request->therapist_id);
             }
             $schedules = $schedule->get();
             $this->data = TherapistScheduleResource::collection($schedules)->hide(["patient","created_by", "updated_by"]);
@@ -57,14 +50,7 @@ class TherapistScheduleController extends Controller
     public function create(Request $request)
     {
         try{
-            $validator = Validator::make($request->all(), [
-                "therapist_id"  => ["required", "exists:therapists,id"]
-            ]);
-            if($validator->fails()){
-                return $this->apiOutput($this->getValidationError($validator), 400);
-            }
-
-            $schedule_settings = TherapistScheduleSettings::where("therapist_id", $request->therapist_id)->first();
+            $schedule_settings = TherapistScheduleSettings::where("therapist_id", $request->user()->id)->first();
             $this->data = new TherapistScheduleSettingsResource($schedule_settings);
             $this->apiSuccess("Therapist Schedule Settings Loaded Successfully");
             return $this->apiOutput();
@@ -83,9 +69,9 @@ class TherapistScheduleController extends Controller
    
     public function store(Request $request)
     {  
+        $request->merge(["therapist_id" => $request->user()->id]);
         $days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];   
         $validator = Validator::make($request->all(),[
-            "therapist_id"  => ["required", "exists:therapists,id"],
             "interval_time" => ["required", "numeric", "min:10"],
             "start_time"    => ["required", "date_format:H:i"],
             "end_time"      => ["required", "date_format:H:i"],
@@ -101,7 +87,6 @@ class TherapistScheduleController extends Controller
         }
 
         try{
-
             DB::beginTransaction();
             $settings = $this->addOrUpdateScheduleSettings($request);
             $this->generateSchedule($settings, $request);
@@ -127,41 +112,27 @@ class TherapistScheduleController extends Controller
      */
     public function show(Request $request)
     {
+        $validator = Validator::make($request->all(),[
+            "id"  => ["required", "exists:therapist_schedules,id"],
+        ],[
+            "id.required" => "Therapist Schedule ID Required",
+        ]); 
 
-                $validator = Validator::make($request->all(),[
-                    "id"  => ["required", "exists:therapist_schedules,id"],
-                ],[
-                    "id.required" => "Therapist Schedule ID Required",
-                ]); 
-                if ($validator->fails()) {
-                    return $this->apiOutput($this->getValidationError($validator), 400);
-                }
-                try{
-                    $schedule = TherapistSchedule::find($request->id);
-                    if( empty($schedule) ){
-                        return $this->apiOutput("Therapist Data Not Found", 400);
-                    }
-                    $this->data = (new TherapistScheduleResource ($schedule));
-                    $this->apiSuccess("Schedule Detail loaded Successfully");
-                    return $this->apiOutput();
-                }catch(Exception $e){
-                    return $this->apiOutput($this->getError($e), 500);
-                }
+        if ($validator->fails()) {
+            return $this->apiOutput($this->getValidationError($validator), 400);
+        }
 
-
-                // try{
-                //     $therapist = $request->user();
-                //     $appointment = TherapistSchedule::where("id", $request->id)
-                //         ->where("therapist_id", $therapist->id)->first();
-                //     if( empty($appointment) ){
-                //         return $this->apiOutput("Appointment Data Not Found", 400);
-                //     }
-                //     $this->data = (new TherapistScheduleResource ($appointment));
-                //     $this->apiSuccess("Therapist Detail Show Successfully");
-                //     return $this->apiOutput();
-                // }catch(Exception $e){
-                //     return $this->apiOutput($this->getError($e), 500);
-                // }
+        try{
+            $schedule = TherapistSchedule::find($request->id);
+            if( empty($schedule) ){
+                return $this->apiOutput("Therapist Data Not Found", 400);
+            }
+            $this->data = (new TherapistScheduleResource ($schedule));
+            $this->apiSuccess("Schedule Detail loaded Successfully");
+            return $this->apiOutput();
+        }catch(Exception $e){
+            return $this->apiOutput($this->getError($e), 500);
+        }
     }
 
 
@@ -181,7 +152,9 @@ class TherapistScheduleController extends Controller
         if ($validator->fails()) {
             return $this->apiOutput($this->getValidationError($validator), 400);
         }
-        $schedule = TherapistSchedule::where("id", $request->id)->first();
+        $schedule = TherapistSchedule::where("id", $request->id)
+            ->where("therapist_id", $request->user()->id)
+            ->first();
         if($schedule->status != "open"){
             return $this->apiOutput("Sorry! You Can't Delete this schedule at this time", 400);
         } 
@@ -204,27 +177,30 @@ class TherapistScheduleController extends Controller
         if ($validator->fails()) {
             return $this->apiOutput($this->getValidationError($validator), 400);
         }
-        TherapistSchedule::whereIn("id", $request->id)->where("status", "open")->delete();
+        TherapistSchedule::whereIn("id", $request->id)
+            ->where("therapist_id", $request->user()->id)
+            ->where("status", "open")->delete();
 
         $this->apiSuccess("Multiple Schedule Deleted Successfully");
         return $this->apiOutput();
     }
 
 
+    /**
+     * Cancel Schedule
+     */
     public function cancelTherapistSchedule(Request $request)
     {
-        try{
-               
-        $validator = Validator::make(
-            $request->all(),[
-                "id"            => ["required", "exists:therapist_schedules,id"]
+        try{    
+            $validator = Validator::make( $request->all(),[
+                "id"    => ["required", "exists:therapist_schedules,id"]
             ]);
 
            if ($validator->fails()) {
                 $this->apiOutput($this->getValidationError($validator), 200);
            }
             $therapistSchedule = TherapistSchedule::find($request->id);
-            $therapistSchedule->cancel_reason =$request->cancel_reason;
+            $therapistSchedule->cancel_reason = $request->cancel_reason;
             $therapistSchedule->save();
             $this->apiSuccess("Therapist Schedule  cancelled successfully");
             $this->data = (new TherapistScheduleResource($therapistSchedule));
@@ -234,29 +210,18 @@ class TherapistScheduleController extends Controller
         }
     }
 
-    public function therapistAvailableSchedule(){
-
-
-                
-                // $users = DB::table('therapist_schedules')
-                //     ->join('therapists', 'therapists.id', '=', 'therapist_schedules.therapist_id')
-                //     ->where("therapist_schedules.date", ">=", date("Y-m-d"))
-                //     ->where("therapist_schedules.status", '=',"open")
-                //     ->select([DB::RAW('DISTINCT(therapists.id)'),'therapist_schedules.status','therapists.first_name', 'therapists.last_name','therapist_schedules.date','therapists.phone'])
-                //     ->get();
-                //     return response()->json($users, 201);
-        
-      
-                $users = DB::table('therapists')
-                    ->join('therapist_schedules', 'therapist_schedules.therapist_id', '=', 'therapists.id')
-                    //->join('therapists', 'therapists.id', '=', 'therapist_schedules.therapist_id')
-                    ->where("therapist_schedules.date", ">=", date("Y-m-d"))
-                    ->where("therapist_schedules.status", '=',"open")
-                    ->select('therapists.id','therapists.first_name','therapists.last_name','therapists.phone','therapists.profile_pic',DB::raw('count(*) as  total') )
-                    ->groupBy('therapists.id','therapists.first_name','therapists.last_name','therapists.phone','therapists.profile_pic')
-                    ->get();
-                    return response()->json($users, 201);
-        
-                           
+    /**
+     * Get All Available Schedule
+     */
+    public function therapistAvailableSchedule(Request $request){
+        $users = DB::table('therapists')
+            ->join('therapist_schedules', 'therapist_schedules.therapist_id', '=', 'therapists.id')
+            ->where("therapist_schedules.date", ">=", date("Y-m-d"))
+            ->where("therapist_schedules.status", '=',"open")
+            ->where("therapist_id", $request->user()->id)
+            ->select('therapists.id','therapists.first_name','therapists.last_name','therapists.phone','therapists.profile_pic',DB::raw('count(*) as  total') )
+            ->groupBy('therapists.id','therapists.first_name','therapists.last_name','therapists.phone','therapists.profile_pic')
+            ->get();
+            return response()->json($users, 201);                 
     }
 }
